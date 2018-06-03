@@ -152,7 +152,7 @@ LABEL1:
 		{2, 3, 4}} // } should in the same line with {2, 3, 4}
 	fmt.Println(a9)
 
-	// slice  is reference not array
+	// slice is reference not array
 	var s1 []int // without define the length, that is slice
 	fmt.Println(s1)
 	s2 := a4[5:8]                     // take 5 to 8 from array a4
@@ -174,7 +174,7 @@ LABEL1:
 	fmt.Println(s6)
 
 	for i, v := range s7 {
-		fmt.Println(i, v) // this would change value in s7, because it use reference
+		fmt.Println(i, v-10) // this would NOT change value in s7, because it use reference
 	} // or use s7[i] to modify value in s7
 
 	// map
@@ -192,7 +192,7 @@ LABEL1:
 	complexMap[1] = make(map[int]string)
 	complexMap[1][1] = "OJBK"
 	fmt.Println(complexMap)
-	content, ok := complexMap[2][1] // multi-value return content and if the map exist; if not the value not exist, content use default value
+	content, ok := complexMap[2][1] // multi-value return content and if the map exist; if the value not exist, content use default value
 	fmt.Println(content, ok)
 
 	m1[1] = "OJBK"
@@ -200,9 +200,9 @@ LABEL1:
 		fmt.Println(k, v)
 	}
 
-	ms := make([]map[int]string, 5)
+	ms := make([]map[int]string, 5) // map[int]string here is to define the content type of array
 	for _, v := range ms {
-		v = make(map[int]string) // this to prove v is only reference, and won't change anything in ms
+		v = make(map[int]string) // this to prove v is only COPY, and won't change anything in ms
 		v[1] = "OJBK"
 		fmt.Println(v)
 	}
@@ -243,7 +243,11 @@ LABEL1:
 		//this will be called last, because defer run in reverse order
 		defer fmt.Println(i) // i here passed value in function
 		defer func() {
-			fmt.Println(i) // anonymous func is a closure here, so i is a reference, when the loop end, it point to value 3
+			/*
+				 i in anonymous func is a copy to local var here, so i is a reference, when the loop end,
+				it point to value 3
+			*/
+			fmt.Println(i)
 		}()
 	}
 
@@ -294,9 +298,13 @@ func learn2(a, b int) (int, int) {
 	return res1, res2 // if return type is not defined above, return must contain values
 }
 
-func learn3(a ...int) { // it will make a to slice to receive variable length input parameters
+// if there is a variable-length input parameters, it should locate at the last position
+func learn3(a ...int) { // it will make a to slice to receive variable-length input parameters
 	a[0] = 100 // note: the variable passed in is copy (or to say passed the value), so changing in the function would not change the value in main
-	// if we take a slice as input parameters, if passed its reference(address), so change in function would influence itself
+	/*
+		if we take a slice as input parameters rather than changing the variable-length parameters into slice,
+		if passed its reference(address), so change in function would influence itself
+	*/
 	fmt.Println(a) // note: variable length parameters like a in this case, should locate in the last position
 }
 
