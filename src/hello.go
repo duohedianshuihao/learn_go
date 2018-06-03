@@ -6,6 +6,7 @@ package main
 */
 import (
 	"fmt"
+	"sort"
 	"strconv"
 )
 
@@ -23,7 +24,7 @@ const (
 
 // save unit
 const (
-	B float64 = 1 << (iota * 10)
+	BIT float64 = 1 << (iota * 10)
 	KB
 	MB
 	GB
@@ -152,7 +153,8 @@ LABEL1:
 	fmt.Println(a9)
 
 	// slice  is reference not array
-	// var s1 []int // without define the length, that is slice
+	var s1 []int // without define the length, that is slice
+	fmt.Println(s1)
 	s2 := a4[5:8]                     // take 5 to 8 from array a4
 	fmt.Println(s2, len(s2), cap(s2)) // len is 3, cap is 5
 	s3 := make([]int, 3, 10)          // 3 is the length of slice, and 10 is the capacity
@@ -170,6 +172,162 @@ LABEL1:
 	s7 := []int{7, 8, 9}
 	copy(s6, s7) // copy s7 to s6
 	fmt.Println(s6)
+
+	for i, v := range s7 {
+		fmt.Println(i, v) // this would change value in s7, because it use reference
+	} // or use s7[i] to modify value in s7
+
+	// map
+	var m1 map[int]string // key type: int	value type: string
+	m1 = map[int]string{}
+	m2 := make(map[int]string)
+	m1[1] = "OJBK" // m1[1] already defined type
+	fmt.Println(m1[1], m2[1])
+	delete(m1, 1)
+	fmt.Println(m1[1])
+
+	var complexMap map[int]map[int]string
+	complexMap = make(map[int]map[int]string)
+	// complexMap[1][1] = "OK"  this is wrong, make only initialize the first map not the map inside
+	complexMap[1] = make(map[int]string)
+	complexMap[1][1] = "OJBK"
+	fmt.Println(complexMap)
+	content, ok := complexMap[2][1] // multi-value return content and if the map exist; if not the value not exist, content use default value
+	fmt.Println(content, ok)
+
+	m1[1] = "OJBK"
+	for k, v := range m1 {
+		fmt.Println(k, v)
+	}
+
+	ms := make([]map[int]string, 5)
+	for _, v := range ms {
+		v = make(map[int]string) // this to prove v is only reference, and won't change anything in ms
+		v[1] = "OJBK"
+		fmt.Println(v)
+	}
+	fmt.Println(ms)
+
+	for i := range ms {
+		ms[i] = make(map[int]string)
+		ms[i][1] = "OJBK"
+	}
+	fmt.Println(ms)
+
+	m1 = map[int]string{1: "a", 2: "b", 3: "c", 4: "d", 5: "e"}
+	sortSlice := make([]int, len(m1))
+	i := 0
+	for k := range m1 {
+		sortSlice[i] = k
+		i++
+	}
+	sort.Ints(sortSlice) // put the keys of map into a slice and sort the slice, which equally sort the map
+	fmt.Println(sortSlice)
+
+	learn3('a', 'b', 'c')
+	num1 := 1
+	num2 := 2
+	learn4(num1, &num2)
+	fmt.Println("original:", num1, num2)
+
+	uname := func() { // this is anonymous function, like lambda in python
+		fmt.Println("this is anonymous function")
+	}
+	uname()
+
+	learnClosure := closure(5)
+	fmt.Println("returning function run continuesly: ", learnClosure(1))
+
+	// defer   call in reverse order
+	for i := 0; i < 3; i++ {
+		//this will be called last, because defer run in reverse order
+		defer fmt.Println(i) // i here passed value in function
+		defer func() {
+			fmt.Println(i) // anonymous func is a closure here, so i is a reference, when the loop end, it point to value 3
+		}()
+	}
+
+	fs := [4]func(){}
+	for i := 0; i < 4; i++ {
+		defer fmt.Println("defer i:", i) // defer here is registered but not run until main func return
+		defer func() {
+			fmt.Println("defer closure i:", i)
+		}()
+		fs[i] = func() {
+			fmt.Println("running func i:", i)
+		}
+	}
+	for _, v := range fs {
+		v()
+	}
+	/*
+		output:
+			running func i: 4
+			running func i: 4
+			running func i: 4
+			running func i: 4
+			defer closure i: 4
+			defer i: 3
+			defer closure i: 4
+			defer i: 2
+			defer closure i: 4
+			defer i: 1
+			defer closure i: 4
+			defer i: 0
+	*/
+
+	// panic and recover
+	aa()
+	bb()
+	cc()
+
+}
+
+// function
+func learn(a int, b string) (res1 int, res2 string) { // if no return value, just left it empty
+	res1, res2 = 1, "asdf"
+	return // if res1, res2 already named in return type above, there is no need to write it in return
+}
+
+func learn2(a, b int) (int, int) {
+	res1, res2 := 1, 2
+	return res1, res2 // if return type is not defined above, return must contain values
+}
+
+func learn3(a ...int) { // it will make a to slice to receive variable length input parameters
+	a[0] = 100 // note: the variable passed in is copy (or to say passed the value), so changing in the function would not change the value in main
+	// if we take a slice as input parameters, if passed its reference(address), so change in function would influence itself
+	fmt.Println(a) // note: variable length parameters like a in this case, should locate in the last position
+}
+
+func learn4(a int, b *int) {
+	a = 111
+	*b = 111
+	fmt.Println("changed value", a, *b)
+}
+
+func closure(x int) func(y int) int { // return an anonymous function
+	fmt.Printf("%p\n", &x)
+	return func(y int) int {
+		fmt.Printf("%p\n", &x)
+		return x + y
+	}
+}
+
+func aa() {
+	fmt.Println("func A")
+}
+
+func bb() {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println("Recover in B")
+		}
+	}()
+	panic("B is panic")
+}
+func cc() {
+	fmt.Println("func C")
 }
 
 /*

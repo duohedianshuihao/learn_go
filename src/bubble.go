@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func main() {
+func bubble() {
 	a := [...]int{2, 5, 3, 7, 4, 8, 1}
 	fmt.Println(a)
 	length := len(a)
