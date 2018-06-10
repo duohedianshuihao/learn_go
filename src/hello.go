@@ -6,6 +6,7 @@ package main
 */
 import (
 	"fmt"
+	"reflect"
 	"sort"
 	"strconv"
 )
@@ -39,6 +40,8 @@ var name = "golbal name"
 type newType int // a new name for newType
 
 type gopher struct{} // declare structure
+
+type ASDF int
 
 type golang interface{} // declare interface
 
@@ -285,6 +288,97 @@ LABEL1:
 	bb()
 	cc()
 
+	//struct
+	struct1 := &person{} // good habit to use &certainStruct
+	struct1.Age = 10     // struct1 is a pointer pointing to a heap address, and don't have to use *struct1.Age
+	struct1.Name = "czy"
+
+	struct2 := person{
+		Name: "czy",
+		Age:  10, // even the last one should have comma
+	}
+	fmt.Println(struct2)
+
+	learnStruct(struct2) // path value to function, so struct is value pass by default
+	fmt.Println(struct2)
+	learnStruct1(&struct2)
+	fmt.Println(struct2)
+
+	struct3 := &struct { // annonymous struct
+		Name string
+		Age  int
+	}{
+		Name: "test",
+		Age:  123,
+	}
+	fmt.Println(struct3)
+
+	// struct4 := &student{
+	// 	Name:          "czy",
+	// 	Contact.Phone: "123",
+	// 	Contact.City:  "Beijing",
+	// }
+
+	// struct in another struct could only be inilizalied by this method, method above is not allowed
+	struct4 := &student{
+		Name: "czy",
+	}
+	struct4.Contact.City = "Beijing"
+	struct4.Contact.Phone = "123"
+	fmt.Println(struct4)
+
+	struct5 := &man{ // go way to make struct man inherit from human
+		Name:  "czy",
+		human: human{1}, // hunam in man is a annonymous fields, so its name is human by default
+	}
+	fmt.Println(struct5.Sex) // it could directly use attributes in human without call struct5.human.Sex
+
+	// method
+	student1 := student{Name: "ads"}
+	student1.Print()
+	var asdf ASDF
+	asdf.Print()         // method value
+	(*ASDF).Print(&asdf) // method expression
+
+	// interface
+	/*
+		structual typing if a struct applied all the method from an interface, it automatically implement this interface,
+		and no need to obviously announce it
+	*/
+
+	var usb USB
+	usb = PhoneConnecter{"iphone"} // PhoneConnector implements USB
+	fmt.Println(usb.Name())
+	usb.Connect()
+	Disconnect(usb)
+	LearnInterface(usb)
+
+	pc := PhoneConnecter{"name 1"}
+	var usbsample USB
+	usbsample = USB(pc) // only pass a copy to the interface, no pointer operations here
+	usbsample.Connect()
+	pc.name = "brand new name" // this would not change the usbsample's attribute
+	usbsample.Connect()
+
+	// reflect
+	user := User{"the way to go", 0, 0}
+	info(user)
+
+	manager := Manager{User: User{"the way to go", 0, 0}, Title: "manager"}
+
+	tm := reflect.TypeOf(manager)
+	fmt.Printf("%#v\n", tm.Field(0)) // User is an anonymous field for manager
+	fmt.Printf("%#v\n", tm.Field(1))
+
+	fmt.Printf("%#v\n", tm.FieldByIndex([]int{0, 0})) // get the first fields in User, which is also first for Manager
+
+	intVal := 123
+	val := reflect.ValueOf(&intVal)
+	val.Elem().SetInt(999)
+	fmt.Println(intVal)
+
+	Set(&user)
+	fmt.Println(user)
 }
 
 // function
@@ -336,6 +430,143 @@ func bb() {
 }
 func cc() {
 	fmt.Println("func C")
+}
+
+//struct
+type person struct {
+	Name string // case sensitive
+	Age  int    // uppercase means public fields, lowercase means private fields
+	// Note: private and public based on package, in the same package, all fields could be visited
+}
+
+type student struct {
+	Name    string
+	Contact struct {
+		Phone, City string
+	}
+}
+
+type human struct {
+	Sex int
+}
+
+type man struct {
+	human
+	Name string
+}
+
+func learnStruct(p person) {
+	p.Age = 13
+	fmt.Println(p)
+}
+
+func learnStruct1(p *person) {
+	p.Age = 13
+	fmt.Println(p)
+}
+
+// method
+func (s student) Print() { // based on the receiver, method would automatically match to certain struct
+	fmt.Println(s.Name)
+}
+
+// Print go could band method to any type
+func (asdf ASDF) Print() {
+	fmt.Println("ASDF")
+}
+
+// interface
+
+// USB is a method to learn interface
+type USB interface {
+	Name() string
+	Connect()
+}
+
+// PhoneConnecter is a struct for USB
+type PhoneConnecter struct {
+	name string
+}
+
+// Name for PhoneConnecter to implement USB
+func (pc PhoneConnecter) Name() string {
+	return pc.name
+}
+
+// Connect for PhoneConnector to implement USB
+func (pc PhoneConnecter) Connect() {
+	fmt.Println("Connect: ", pc.name)
+}
+
+// Disconnect requires an USB interface
+func Disconnect(usb USB) {
+	if pc, ok := usb.(PhoneConnecter); ok {
+		fmt.Println("its a ", pc.name, " Connector")
+		return
+	}
+	fmt.Println("Unknown Connector")
+}
+
+// LearnInterface interface{} kindda like a base interface for everything
+func LearnInterface(item interface{}) {
+	switch t := item.(type) {
+	case PhoneConnecter:
+		fmt.Println("its a PhoneConnector", t.name)
+	default:
+		fmt.Println("Unknown type")
+	}
+}
+
+// User for reflect
+type User struct {
+	Name string
+	ID   int
+	Age  int
+}
+
+// Manager for reflect
+type Manager struct {
+	User
+	Title string
+}
+
+// Hello for reflect
+func (user User) Hello() {
+	fmt.Println("hello", user.Name)
+}
+
+func info(o interface{}) { // pointer parameter is NOT working here
+	t := reflect.TypeOf(o)
+	fmt.Println("Type: ", t.Name())
+
+	if k := t.Kind(); k != reflect.Struct {
+		fmt.Println("only value passed here")
+		return
+	}
+
+	v := reflect.ValueOf(o)
+	fmt.Println("Fields:")
+
+	for index := 0; index < t.NumField(); index++ {
+		f := t.Field(index)
+		val := v.Field(index).Interface()
+		fmt.Printf("%6s: %v = %v\n", f.Name, f.Type, val)
+	}
+}
+
+// Set used to change struct
+func Set(o interface{}) {
+	v := reflect.ValueOf(o)
+	if v.Kind() == reflect.Ptr && !v.Elem().CanSet() {
+		fmt.Println("this could not be set")
+		return
+	}
+
+	v = v.Elem()
+
+	if f := v.FieldByName("Name"); f.Kind() == reflect.String {
+		f.SetString("BYEbye")
+	}
 }
 
 /*
