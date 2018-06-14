@@ -7,8 +7,10 @@ package main
 import (
 	"fmt"
 	"reflect"
+	"runtime"
 	"sort"
 	"strconv"
+	"sync"
 )
 
 // PI is const
@@ -41,6 +43,7 @@ type newType int // a new name for newType
 
 type gopher struct{} // declare structure
 
+// ASDF 1234
 type ASDF int
 
 type golang interface{} // declare interface
@@ -379,6 +382,92 @@ LABEL1:
 
 	Set(&user)
 	fmt.Println(user)
+
+	// concurrency!!!!!
+	channel := make(chan bool)
+	go func() {
+		fmt.Println("Go Go Go")
+		channel <- true
+		close(channel)
+	}()
+
+	for v := range channel {
+		fmt.Println(v)
+	}
+
+	/*
+		this will not print something for sure, because channel with cache will NOT wait for someone to read from it
+		so the main function would quit after putting true to the channel
+
+		annonymous func and cc <- true would run at the same time, so if cc <- finish first, the print will disappear
+	*/
+	cc := make(chan bool) // channel with size, is channel with cache
+	go func() {
+		fmt.Println("channel with cache is async, without cache is sync")
+		<-cc
+	}()
+	cc <- true
+
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	ccc := make(chan bool, 10)
+
+	for i := 0; i < 10; i++ {
+		go func(ii int) {
+			fmt.Println(ii + 10000000000)
+			ccc <- true
+		}(i)
+	}
+
+	for i := 0; i < 10; i++ {
+		<-ccc // ensure there is value for 10 times, which means the announymous func above put 10 values into channel
+	}
+
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	wg := sync.WaitGroup{}
+	wg.Add(10)
+
+	for i := 0; i < 10; i++ {
+		go func(wg *sync.WaitGroup, ii int) {
+			fmt.Println(9990000 + ii)
+			wg.Done()
+		}(&wg, i)
+	}
+
+	wg.Wait()
+
+	c1, c2 := make(chan int), make(chan string)
+	o := make(chan bool)
+	go func() {
+		for {
+			select {
+			case v, ok := <-c1: // even if c1 is closed, it will still read from c1, getting default 0 and false
+				if !ok {
+					o <- true
+					break
+				} else {
+					fmt.Println("c1", v)
+				}
+			case v, ok := <-c2:
+				if !ok {
+					o <- true
+					break
+				} else {
+					fmt.Println("c2", v)
+				}
+			}
+		}
+	}()
+
+	c1 <- 1
+	c2 <- "hi"
+	c1 <- 2
+	c2 <- "hello"
+
+	close(c1) // when c1 close, the select struct would get ok is false, so there would be a value put to channel o
+	// and main func would output o, then the main function exit
+	close(c2) // even if u dont close c2, the whole function would also run properly
+	// also its useless to ensure two channel are both closed
+	<-o
 }
 
 // function
@@ -568,6 +657,8 @@ func Set(o interface{}) {
 		f.SetString("BYEbye")
 	}
 }
+
+// concurrency
 
 /*
 函数名首字母小写： 私有函数
